@@ -226,3 +226,6 @@ wandb/
 *.bin
 *.pt
 *.pth
+
+logs/
+data/

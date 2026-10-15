@@ -5,11 +5,8 @@ from pathlib import Path
 
 # Each entry is a list of CLI arguments for scripts/train.py
 JOBS = [
-    # 1.5B: smaller micro-batch to fit 8 GB VRAM; effective batch stays 32
     ["--model_id", "Qwen/Qwen2.5-1.5B", "--lr", "2e-4",
-     "--batch_size", "8", "--grad_accum", "4", "--seed", "42"],
-    ["--model_id", "Qwen/Qwen2.5-0.5B", "--lr", "2e-4", "--seed", "43"],
-    ["--model_id", "Qwen/Qwen2.5-0.5B", "--lr", "2e-4", "--seed", "44"],
+     "--batch_size", "8", "--grad_accum", "4", "--seed", "44"],
 ]
 
 Path("logs").mkdir(exist_ok=True)

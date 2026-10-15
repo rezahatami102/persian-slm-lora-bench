@@ -5,7 +5,7 @@ import os
 import numpy as np
 import torch
 from datasets import Dataset
-from farstail.datasets import farstail
+import pandas as pd
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from sklearn.metrics import accuracy_score, f1_score
 from transformers import (
@@ -67,7 +67,11 @@ def main():
     run_name = f"{args.model_id.split('/')[-1]}_r{args.lora_r}_lr{args.lr}_s{args.seed}"
     out_dir = os.path.join("outputs", run_name)
 
-    train_df, val_df, test_df = farstail.load_original_data()
+    # Load from the local cache created by scripts/cache_data.py (no network needed)
+    train_df, val_df, test_df = (
+        pd.read_csv(f"data/farstail_{s}.csv", encoding="utf-8")
+        for s in ("train", "val", "test")
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     if tokenizer.pad_token is None:
