@@ -1,0 +1,1 @@
+{"run": "Qwen2.5-0.5B_r16_s42", "model_id": "Qwen/Qwen2.5-0.5B", "lora_r": 16, "lr": 0.0002, "epochs": 3, "seed": 42, "val_accuracy": 0.7905009759271308, "val_macro_f1": 0.7889304356130564, "test_accuracy": 0.8203324808184144, "test_macro_f1": 0.8192257608257772, "peak_vram_mib": 2475.478515625}
