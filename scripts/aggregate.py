@@ -5,6 +5,11 @@ import pandas as pd
 rows = [json.loads(line) for line in open("results/results.jsonl", encoding="utf-8")]
 df = pd.DataFrame(rows)
 
+# Keep only the latest record for each (model, rank, lr, epochs, seed) combination
+df = df.drop_duplicates(
+    subset=["model_id", "lora_r", "lr", "epochs", "seed"], keep="first"
+)
+
 group_cols = ["model_id", "lora_r", "lr"]
 metrics = ["val_macro_f1", "test_accuracy", "test_macro_f1", "peak_vram_mib"]
 

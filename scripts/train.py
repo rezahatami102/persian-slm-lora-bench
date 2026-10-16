@@ -32,6 +32,7 @@ def parse_args():
     p.add_argument("--batch_size", type=int, default=16)
     p.add_argument("--grad_accum", type=int, default=2)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--smoke", action="store_true", help="Tiny fast run for code checks")
     return p.parse_args()
 
 
@@ -72,6 +73,12 @@ def main():
         pd.read_csv(f"data/farstail_{s}.csv", encoding="utf-8")
         for s in ("train", "val", "test")
     )
+
+    if args.smoke:
+        train_df = train_df.sample(256, random_state=0)
+        val_df = val_df.head(64)
+        test_df = test_df.head(64)
+        args.epochs = 1
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     if tokenizer.pad_token is None:
@@ -164,6 +171,10 @@ def main():
         "peak_vram_mib": torch.cuda.max_memory_allocated() / 1024**2,
     }
     print(json.dumps(record, indent=2))
+
+    if args.smoke:
+        print("Smoke run finished; results not saved.")
+        return
 
     os.makedirs("results", exist_ok=True)
     with open("results/results.jsonl", "a", encoding="utf-8") as f:

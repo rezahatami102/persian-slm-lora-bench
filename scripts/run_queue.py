@@ -5,8 +5,10 @@ from pathlib import Path
 
 # Each entry is a list of CLI arguments for scripts/train.py
 JOBS = [
-    ["--model_id", "Qwen/Qwen2.5-1.5B", "--lr", "2e-4",
-     "--batch_size", "8", "--grad_accum", "4", "--seed", "44"],
+    ["--model_id", "Qwen/Qwen2.5-0.5B", "--lr", "2e-4",
+     "--lora_r", str(r), "--seed", str(seed)]
+    for r in (4, 64)
+    for seed in (42, 43, 44)
 ]
 
 Path("logs").mkdir(exist_ok=True)
