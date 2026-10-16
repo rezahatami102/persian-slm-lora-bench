@@ -17,6 +17,9 @@ Setup: LoRA on all linear projections, 4-bit NF4 quantization, 3 epochs, effecti
 | Qwen2.5-0.5B | 64 | 2e-4 | 3 | 0.7877 ± 0.0109 | 0.8039 ± 0.0071 | 0.8011 ± 0.0066 | 2910 |
 | Qwen2.5-1.5B | 16 | 2e-4 | 3 | 0.8675 ± 0.0049 | 0.8659 ± 0.0060 | 0.8652 ± 0.0059 | 3545 |
 | Gemma-3-1B (pt) | 16 | 2e-4 | 3 | 0.8902 ± 0.0076 | 0.8943 ± 0.0024 | **0.8935 ± 0.0024** | 2473 |
+| ParsBERT (bert-fa-base-uncased), full FT | – | 2e-5 | 3 | 0.7975 ± 0.0047 | 0.8084 ± 0.0109 | 0.8071 ± 0.0103 | 4074 |
+
+ParsBERT is fully fine-tuned in bf16 without quantization, so its VRAM figure is not directly comparable to the QLoRA rows.
 
 Peak VRAM is `torch.cuda.max_memory_allocated`, not total process memory.
 
@@ -33,6 +36,7 @@ Peak VRAM is `torch.cuda.max_memory_allocated`, not total process memory.
 | Gemma-3 | 95.2 | 3.03 |
 
 Gemma needs about 39% fewer tokens for the same Persian text. This is consistent with tokenizer efficiency contributing to its advantage, but this study does not isolate it: the model families also differ in pre-training data and architecture.
+5. **Encoder baseline.** A fully fine-tuned ParsBERT (0.8071) is statistically indistinguishable from Qwen2.5-0.5B + LoRA (0.8124), and is 5.8 points below Qwen2.5-1.5B and 8.6 points below Gemma-3-1B. ParsBERT used common default hyperparameters (lr 2e-5, 4 epochs) and was not tuned.
 
 ## Method
 
@@ -62,12 +66,12 @@ Gemma models are gated: create a free Hugging Face account, accept the model lic
 - Runs are not bit-exact reproducible even with a fixed seed: an accidental duplicate of Qwen2.5-1.5B seed 44 gave test Macro-F1 0.8719 and 0.8655 (the first run is the one reported).
 - One dataset; learning rate was tuned on Qwen2.5-0.5B only and reused for all models.
 - Gemma was tested at a single size.
-- No encoder baseline (e.g. ParsBERT) yet, so absolute numbers lack a classic reference point.
+The encoder baseline (ParsBERT) uses untuned default hyperparameters.
 - Easy vs. hard test subsets have not been analyzed yet.
 
 ## Roadmap
 
-- [ ] Encoder baseline (ParsBERT / XLM-R)
+- [x] Encoder baseline (ParsBERT / XLM-R)
 - [ ] Error analysis on easy vs. hard test subsets
 - [ ] Synthetic-data augmentation ablation
 - [ ] Second task (question answering)
