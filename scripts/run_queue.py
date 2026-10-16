@@ -5,9 +5,8 @@ from pathlib import Path
 
 # Each entry is a list of CLI arguments for scripts/train.py
 JOBS = [
-    ["--model_id", "Qwen/Qwen2.5-0.5B", "--lr", "2e-4",
-     "--lora_r", str(r), "--seed", str(seed)]
-    for r in (4, 64)
+    ["--model_id", "google/gemma-3-1b-pt", "--lr", "2e-4",
+     "--batch_size", "8", "--grad_accum", "4", "--seed", str(seed)]
     for seed in (42, 43, 44)
 ]
 
