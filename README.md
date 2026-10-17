@@ -19,6 +19,22 @@ Setup: LoRA on all linear projections, 4-bit NF4 quantization, 3 epochs, effecti
 | Gemma-3-1B (pt) | 16 | 2e-4 | 3 | 0.8902 ± 0.0076 | 0.8943 ± 0.0024 | **0.8935 ± 0.0024** | 2473 |
 | ParsBERT (bert-fa-base-uncased), full FT | – | 2e-5 | 3 | 0.7975 ± 0.0047 | 0.8084 ± 0.0109 | 0.8071 ± 0.0103 | 4074 |
 
+## Easy vs. hard test examples
+
+The official FarsTail easy/hard partition is not distributed with the `farstail` package, so we reconstruct the idea of the original paper: a hypothesis-only classifier (character n-gram TF-IDF + logistic regression, trained on the training set; 52.1% test accuracy vs. 33% chance) is run on the test set. Examples it classifies correctly are "easy" (solvable from superficial hypothesis cues, n=814); the rest are "hard" (n=750). This is our own split, not the official one.
+
+Accuracy, mean ± std over 3 seeds:
+
+| Model | Easy acc | Hard acc | Gap (easy - hard) |
+|:--|:--|:--|:--|
+| ParsBERT (full FT) | 0.8501 ± 0.0154 | 0.7631 ± 0.0060 | 0.0870 ± 0.0095 |
+| Qwen2.5-0.5B, r=16 | 0.8587 ± 0.0061 | 0.7631 ± 0.0056 | 0.0956 ± 0.0072 |
+| Qwen2.5-0.5B, r=64 | 0.8632 ± 0.0047 | 0.7409 ± 0.0107 | 0.1223 ± 0.0073 |
+| Qwen2.5-1.5B, r=16 | 0.8907 ± 0.0061 | 0.8360 ± 0.0114 | 0.0547 ± 0.0175 |
+| Gemma-3-1B, r=16 | 0.9189 ± 0.0021 | 0.8667 ± 0.0027 | 0.0523 ± 0.0013 |
+
+Full table: `results/difficulty_summary.md`.
+
 ParsBERT is fully fine-tuned in bf16 without quantization, so its VRAM figure is not directly comparable to the QLoRA rows.
 
 Peak VRAM is `torch.cuda.max_memory_allocated`, not total process memory.
@@ -37,6 +53,8 @@ Peak VRAM is `torch.cuda.max_memory_allocated`, not total process memory.
 
 Gemma needs about 39% fewer tokens for the same Persian text. This is consistent with tokenizer efficiency contributing to its advantage, but this study does not isolate it: the model families also differ in pre-training data and architecture.
 5. **Encoder baseline.** A fully fine-tuned ParsBERT (0.8071) is statistically indistinguishable from Qwen2.5-0.5B + LoRA (0.8124), and is 5.8 points below Qwen2.5-1.5B and 8.6 points below Gemma-3-1B. ParsBERT used common default hyperparameters (lr 2e-5, 4 epochs) and was not tuned.
+6. **Larger models gain mostly on hard examples.** From Qwen2.5-0.5B to Gemma-3-1B, accuracy rises by 6.0 points on easy and 10.4 points on hard examples, and the easy-hard gap shrinks from about 0.10 to 0.05. This suggests they rely less on superficial hypothesis cues (with the caveat that the split is our own reconstruction and the label mix differs between groups: the easy group contains more "neutral" examples).
+7. **Exploratory:** LoRA rank 64 had the lowest hard-example accuracy (0.741 vs 0.763 for r=16) and the largest gap, although overall accuracy differences between ranks were within noise. With 3 seeds and a post-hoc comparison, this should be treated as a hypothesis, not a result.
 
 ## Method
 
@@ -56,6 +74,9 @@ python scripts/train.py --smoke         # quick sanity check, results not saved
 python scripts/train.py --model_id Qwen/Qwen2.5-0.5B --lora_r 16 --lr 2e-4 --seed 42
 python scripts/run_queue.py             # batch of runs defined in JOBS
 python scripts/aggregate.py             # mean ± std table -> results/summary.md
+python scripts/make_difficulty_split.py
+python scripts/predict.py
+python scripts/analyze_difficulty.py
 ```
 
 Gemma models are gated: create a free Hugging Face account, accept the model license on its page, and run `hf auth login`.
@@ -68,11 +89,13 @@ Gemma models are gated: create a free Hugging Face account, accept the model lic
 - Gemma was tested at a single size.
 The encoder baseline (ParsBERT) uses untuned default hyperparameters.
 - Easy vs. hard test subsets have not been analyzed yet.
+- Test predictions for the difficulty analysis were regenerated from saved checkpoints; recomputed Macro-F1 matched the logged values within 0.005 for all runs. One Qwen2.5-1.5B seed-44 checkpoint belongs to the accidental duplicate run (0.8655), not the first run (0.8719) used in the main table.
+- The easy/hard split is not the official one (see above).
 
 ## Roadmap
 
 - [x] Encoder baseline (ParsBERT / XLM-R)
-- [ ] Error analysis on easy vs. hard test subsets
+- [x] Error analysis on easy vs. hard test subsets
 - [ ] Synthetic-data augmentation ablation
 - [ ] Second task (question answering)
 
