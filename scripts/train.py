@@ -33,6 +33,7 @@ def parse_args():
     p.add_argument("--grad_accum", type=int, default=2)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--smoke", action="store_true", help="Tiny fast run for code checks")
+    p.add_argument("--train_frac", type=float, default=1.0)
     return p.parse_args()
 
 
@@ -68,11 +69,22 @@ def main():
     run_name = f"{args.model_id.split('/')[-1]}_r{args.lora_r}_lr{args.lr}_s{args.seed}"
     out_dir = os.path.join("outputs", run_name)
 
+    if args.train_frac < 1.0:
+        run_name += f"_f{args.train_frac}"
+
     # Load from the local cache created by scripts/cache_data.py (no network needed)
     train_df, val_df, test_df = (
         pd.read_csv(f"data/farstail_{s}.csv", encoding="utf-8")
         for s in ("train", "val", "test")
     )
+
+    if args.train_frac < 1.0:
+        # Stratified subsample; the sampling seed follows the training seed
+        train_df = (
+            train_df.groupby("label", group_keys=False)
+            .sample(frac=args.train_frac, random_state=args.seed)
+            .reset_index(drop=True)
+        )
 
     if args.smoke:
         train_df = train_df.sample(256, random_state=0)
@@ -169,6 +181,7 @@ def main():
         "test_accuracy": test_metrics["test_accuracy"],
         "test_macro_f1": test_metrics["test_macro_f1"],
         "peak_vram_mib": torch.cuda.max_memory_allocated() / 1024**2,
+        "train_frac": args.train_frac,
     }
     print(json.dumps(record, indent=2))
 

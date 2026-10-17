@@ -2,32 +2,37 @@ import json
 
 import pandas as pd
 
-rows = [json.loads(line) for line in open("results/results.jsonl", encoding="utf-8")]
-df = pd.DataFrame(rows)
+with open("results/results.jsonl", encoding="utf-8") as f:
+    df = pd.DataFrame([json.loads(line) for line in f])
 
-# Keep only the latest record for each (model, rank, lr, epochs, seed) combination
+# Older records have no train_frac column: treat them as full-data runs
+if "train_frac" not in df:
+    df["train_frac"] = 1.0
+df["train_frac"] = df["train_frac"].fillna(1.0)
+
+# Keep only the first record for each unique configuration
 df = df.drop_duplicates(
-    subset=["model_id", "lora_r", "lr", "epochs", "seed"], keep="first"
+    subset=["model_id", "lora_r", "lr", "epochs", "train_frac", "seed"], keep="first"
 )
 
-group_cols = ["model_id", "lora_r", "lr"]
+group_cols = ["model_id", "lora_r", "lr", "train_frac"]
 metrics = ["val_macro_f1", "test_accuracy", "test_macro_f1", "peak_vram_mib"]
 
-summary = df.groupby(group_cols)[metrics].agg(["mean", "std", "count"])
-
-
-def fmt(g):
-    out = {"n_seeds": int(g[("test_macro_f1", "count")])}
+rows = []
+for keys, g in df.groupby(group_cols):
+    row = dict(zip(group_cols, keys))
+    row["n_seeds"] = len(g)
     for m in metrics:
-        mean, std = g[(m, "mean")], g[(m, "std")]
         if m == "peak_vram_mib":
-            out[m] = f"{mean:.0f}"
+            row[m] = f"{g[m].mean():.0f}"
+        elif len(g) > 1:
+            row[m] = f"{g[m].mean():.4f} ± {g[m].std():.4f}"
         else:
-            out[m] = f"{mean:.4f} ± {std:.4f}" if pd.notna(std) else f"{mean:.4f}"
-    return pd.Series(out)
+            row[m] = f"{g[m].mean():.4f}"
+    rows.append(row)
 
-
-table = summary.apply(fmt, axis=1).reset_index()
+# Sort on the numeric columns (before they were turned into text)
+table = pd.DataFrame(rows).sort_values(["model_id", "train_frac", "lora_r", "lr"])
 print(table.to_markdown(index=False))
 
 with open("results/summary.md", "w", encoding="utf-8") as f:
